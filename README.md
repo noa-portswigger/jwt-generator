@@ -23,6 +23,9 @@ hatch shell
 ```bash
 # Generate JWT from JSON payload file
 hatch run jwt-gen path/to/payload.json
+
+# Generate JWT with Authorization header format
+hatch run jwt-gen --header path/to/payload.json
 ```
 
 ### Key Management
