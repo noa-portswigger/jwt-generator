@@ -46,6 +46,20 @@ The generated tokens use:
 
 ## Development
 
+### Testing
+
+```bash
+# Run tests with code formatting checks
+hatch test
+```
+
+This runs both Black code formatting checks and pytest unit tests.
+
+If tests fail due to formatting issues, fix them with:
+```bash
+hatch run test:black .
+```
+
 ### Building
 
 ```bash
