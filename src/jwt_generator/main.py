@@ -73,7 +73,7 @@ def main(json_file_path, header):
         token = jwt.encode(payload, private_key, algorithm="ES256")
 
         if header:
-            print(f"Authorization: Bearer {token}")
+            print(f"Authorization: JWT {token}")
         else:
             print(token)
 
