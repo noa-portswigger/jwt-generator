@@ -16,11 +16,6 @@ dependencies = [
 ]
 requires-python = ">=3.8"
 
-[project.optional-dependencies]
-test = [
-    "pytest>=7.0.0",
-]
-
 [project.scripts]
 jwt-gen = "jwt_generator.main:main"
 
@@ -30,14 +25,10 @@ path = "src/jwt_generator/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/jwt_generator"]
 
-[tool.hatch.envs.test]
+[tool.hatch.envs.hatch-test]
 dependencies = [
-    "pytest>=7.0.0",
     "black>=22.0.0",
 ]
 
-[tool.hatch.envs.test.scripts]
-test = [
-    "black --check --diff src/ tests/",
-    "pytest {args}",
-]
+[tool.hatch.envs.hatch-test.scripts]
+run = "black --check --diff src/ tests/ && pytest {args}"
