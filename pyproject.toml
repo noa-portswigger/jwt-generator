@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jwt-generator"
+dynamic = ["version"]
+description = "JWT token generator with ES256 key pair management"
+authors = [
+    {name = "User", email = "user@example.com"},
+]
+dependencies = [
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.0",
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+jwt-gen = "jwt_generator.main:main"
+
+[tool.hatch.version]
+path = "src/jwt_generator/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jwt_generator"]
