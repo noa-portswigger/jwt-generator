@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 
 import click
 import jwt
@@ -59,6 +60,22 @@ def load_json_payload(file_path):
         sys.exit(1)
 
 
+def add_dynamic_claims(payload):
+    """Add dynamic timestamp claims to payload."""
+    current_time = int(time.time())
+
+    # Add iat (issued at) - current time
+    payload["iat"] = current_time
+
+    # Add nbf (not before) - current time
+    payload["nbf"] = current_time
+
+    # Add exp (expires) - 10 minutes from now (600 seconds)
+    payload["exp"] = current_time + 600
+
+    return payload
+
+
 @click.command()
 @click.argument("json_file_path", type=click.Path(exists=True, readable=True))
 @click.option(
@@ -69,6 +86,7 @@ def main(json_file_path, header):
     try:
         private_key = load_private_key()
         payload = load_json_payload(json_file_path)
+        payload = add_dynamic_claims(payload)
 
         token = jwt.encode(payload, private_key, algorithm="ES256")
 

@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 
 import jwt
 import pytest
@@ -10,6 +11,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from jwt_generator.main import (
+    add_dynamic_claims,
     generate_key_pair,
     load_private_key,
     load_json_payload,
@@ -117,13 +119,53 @@ class TestJSONPayload:
         assert "Invalid JSON" in captured.err
 
 
+class TestDynamicClaims:
+    def test_add_dynamic_claims(self):
+        """Test that dynamic claims are added correctly."""
+        original_payload = {"sub": "123", "name": "Test User"}
+
+        # Record time before adding claims
+        before_time = int(time.time())
+
+        result_payload = add_dynamic_claims(original_payload.copy())
+
+        # Record time after adding claims
+        after_time = int(time.time())
+
+        # Check that original payload fields are preserved
+        assert result_payload["sub"] == "123"
+        assert result_payload["name"] == "Test User"
+
+        # Check that iat is set to current time (within reasonable range)
+        assert before_time <= result_payload["iat"] <= after_time
+
+        # Check that nbf equals iat
+        assert result_payload["nbf"] == result_payload["iat"]
+
+        # Check that exp is 10 minutes (600 seconds) after iat
+        assert result_payload["exp"] == result_payload["iat"] + 600
+
+    def test_add_dynamic_claims_overwrites_existing(self):
+        """Test that dynamic claims overwrite existing timestamp claims."""
+        original_payload = {"sub": "123", "iat": 1000, "nbf": 2000, "exp": 3000}
+
+        result_payload = add_dynamic_claims(original_payload.copy())
+
+        # Claims should be overwritten with current values
+        current_time = int(time.time())
+        assert result_payload["iat"] != 1000
+        assert result_payload["nbf"] != 2000
+        assert result_payload["exp"] != 3000
+        assert abs(result_payload["iat"] - current_time) <= 1
+
+
 class TestJWTGeneration:
     def test_jwt_token_generation(self, tmp_path):
-        """Test that valid JWT tokens are generated."""
+        """Test that valid JWT tokens are generated with dynamic claims."""
         os.chdir(tmp_path)
 
-        # Create test payload
-        payload_data = {"sub": "123", "name": "Test User", "exp": 9999999999}
+        # Create test payload (without timestamp claims)
+        payload_data = {"sub": "123", "name": "Test User"}
         payload_file = tmp_path / "payload.json"
         with open(payload_file, "w") as f:
             json.dump(payload_data, f)
@@ -140,14 +182,26 @@ class TestJWTGeneration:
         # Verify token can be decoded with the public key
         public_key = private_key.public_key()
         decoded = jwt.decode(token, public_key, algorithms=["ES256"])
-        assert decoded == payload_data
+
+        # Check that original payload fields are preserved
+        assert decoded["sub"] == "123"
+        assert decoded["name"] == "Test User"
+
+        # Check that dynamic claims were added
+        assert "iat" in decoded
+        assert "nbf" in decoded
+        assert "exp" in decoded
+
+        # Check that nbf equals iat and exp is 10 minutes later
+        assert decoded["nbf"] == decoded["iat"]
+        assert decoded["exp"] == decoded["iat"] + 600
 
     def test_jwt_with_header_option(self, tmp_path):
         """Test JWT generation with --header option."""
         os.chdir(tmp_path)
 
-        # Create test payload
-        payload_data = {"sub": "123", "name": "Test User", "exp": 9999999999}
+        # Create test payload (without timestamp claims)
+        payload_data = {"sub": "123", "name": "Test User"}
         payload_file = tmp_path / "payload.json"
         with open(payload_file, "w") as f:
             json.dump(payload_data, f)
@@ -160,11 +214,19 @@ class TestJWTGeneration:
 
         assert result.exit_code == 0
         output = result.output.strip()
-        assert output.startswith("Authorization: Bearer ")
+        assert output.startswith("Authorization: JWT ")
 
         # Extract and verify token
-        token = output.replace("Authorization: Bearer ", "")
+        token = output.replace("Authorization: JWT ", "")
         private_key = load_private_key()
         public_key = private_key.public_key()
         decoded = jwt.decode(token, public_key, algorithms=["ES256"])
-        assert decoded == payload_data
+
+        # Check that original payload fields are preserved
+        assert decoded["sub"] == "123"
+        assert decoded["name"] == "Test User"
+
+        # Check that dynamic claims were added
+        assert "iat" in decoded
+        assert "nbf" in decoded
+        assert "exp" in decoded
