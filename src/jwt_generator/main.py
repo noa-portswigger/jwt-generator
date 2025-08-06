@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 
+import click
 import jwt
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -62,20 +63,21 @@ def load_json_payload(file_path):
         sys.exit(1)
 
 
-def main():
-    """Main function to generate JWT token."""
-    if len(sys.argv) != 2:
-        print("Usage: jwt-gen <path-to-json-file>", file=sys.stderr)
-        sys.exit(1)
-    
-    json_file_path = sys.argv[1]
-    
+@click.command()
+@click.argument('json_file_path', type=click.Path(exists=True, readable=True))
+@click.option('--header', is_flag=True, help='make output suitable for including in http header')
+def main(json_file_path, header):
+    """Generate JWT token from JSON payload file."""
     try:
         private_key = load_private_key()
         payload = load_json_payload(json_file_path)
         
         token = jwt.encode(payload, private_key, algorithm="ES256")
-        print(token)
+        
+        if header:
+            print(f"Authorization: Bearer {token}")
+        else:
+            print(token)
         
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
